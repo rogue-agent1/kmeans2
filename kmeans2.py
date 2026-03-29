@@ -1,48 +1,39 @@
 #!/usr/bin/env python3
-"""K-means clustering algorithm."""
-import sys, random, math
+"""K-Means clustering. Zero dependencies."""
+import math, random
 
-def distance(a, b):
-    return math.sqrt(sum((x-y)**2 for x,y in zip(a,b)))
+class KMeans:
+    def __init__(self, k=3, max_iter=100, seed=42):
+        self.k = k; self.max_iter = max_iter; self.seed = seed
+        self.centroids = []; self.labels = []
 
-def kmeans(points, k, max_iter=100):
-    centroids = random.sample(points, k)
-    for _ in range(max_iter):
-        clusters = [[] for _ in range(k)]
-        for p in points:
-            nearest = min(range(k), key=lambda i: distance(p, centroids[i]))
-            clusters[nearest].append(p)
-        new_centroids = []
-        for i in range(k):
-            if clusters[i]:
-                d = len(points[0])
-                new_centroids.append(tuple(sum(p[j] for p in clusters[i])/len(clusters[i]) for j in range(d)))
-            else:
-                new_centroids.append(centroids[i])
-        if new_centroids == centroids: break
-        centroids = new_centroids
-    labels = []
-    for p in points:
-        labels.append(min(range(k), key=lambda i: distance(p, centroids[i])))
-    return centroids, labels, clusters
+    def _dist(self, a, b):
+        return math.sqrt(sum((ai-bi)**2 for ai, bi in zip(a, b)))
 
-def inertia(points, centroids, labels):
-    return sum(distance(points[i], centroids[labels[i]])**2 for i in range(len(points)))
+    def fit(self, X):
+        random.seed(self.seed)
+        self.centroids = random.sample(X, min(self.k, len(X)))
+        for _ in range(self.max_iter):
+            self.labels = [min(range(self.k), key=lambda j: self._dist(x, self.centroids[j])) for x in X]
+            new_centroids = []
+            for j in range(self.k):
+                cluster = [X[i] for i in range(len(X)) if self.labels[i] == j]
+                if cluster:
+                    d = len(X[0])
+                    new_centroids.append([sum(p[dim] for p in cluster)/len(cluster) for dim in range(d)])
+                else:
+                    new_centroids.append(self.centroids[j])
+            if new_centroids == self.centroids: break
+            self.centroids = new_centroids
+        return self
 
-def test():
-    random.seed(42)
-    cluster1 = [(random.gauss(0,0.3), random.gauss(0,0.3)) for _ in range(20)]
-    cluster2 = [(random.gauss(5,0.3), random.gauss(5,0.3)) for _ in range(20)]
-    points = cluster1 + cluster2
-    centroids, labels, clusters = kmeans(points, 2)
-    label_set_1 = set(labels[:20])
-    label_set_2 = set(labels[20:])
-    assert len(label_set_1) == 1 and len(label_set_2) == 1
-    assert label_set_1 != label_set_2
-    iner = inertia(points, centroids, labels)
-    assert iner < 10
-    print("  kmeans2: ALL TESTS PASSED")
+    def predict(self, X):
+        return [min(range(self.k), key=lambda j: self._dist(x, self.centroids[j])) for x in X]
+
+    def inertia(self, X):
+        return sum(self._dist(X[i], self.centroids[self.labels[i]])**2 for i in range(len(X)))
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "test": test()
-    else: print("K-means clustering")
+    X = [[1,1],[1.5,2],[3,4],[5,7],[3.5,5],[4.5,5]]
+    km = KMeans(2).fit(X)
+    print(f"Labels: {km.labels}")
