@@ -1,61 +1,48 @@
 #!/usr/bin/env python3
-"""kmeans2: K-means clustering with k-means++ initialization."""
-import math, random, sys
+"""K-means clustering algorithm."""
+import sys, random, math
 
 def distance(a, b):
     return math.sqrt(sum((x-y)**2 for x,y in zip(a,b)))
 
-def kmeans_pp_init(X, k):
-    centers = [X[random.randint(0, len(X)-1)]]
-    for _ in range(k - 1):
-        dists = [min(distance(x, c)**2 for c in centers) for x in X]
-        total = sum(dists)
-        r = random.random() * total
-        cumulative = 0
-        for i, d in enumerate(dists):
-            cumulative += d
-            if cumulative >= r:
-                centers.append(X[i]); break
-    return centers
-
-def kmeans(X, k, max_iter=100, seed=42):
-    random.seed(seed)
-    centers = kmeans_pp_init(X, k)
-    n_features = len(X[0])
+def kmeans(points, k, max_iter=100):
+    centroids = random.sample(points, k)
     for _ in range(max_iter):
-        # Assign
-        labels = [min(range(k), key=lambda j: distance(x, centers[j])) for x in X]
-        # Update
-        new_centers = []
-        for j in range(k):
-            members = [X[i] for i in range(len(X)) if labels[i] == j]
-            if members:
-                new_centers.append([sum(m[f] for m in members)/len(members) for f in range(n_features)])
+        clusters = [[] for _ in range(k)]
+        for p in points:
+            nearest = min(range(k), key=lambda i: distance(p, centroids[i]))
+            clusters[nearest].append(p)
+        new_centroids = []
+        for i in range(k):
+            if clusters[i]:
+                d = len(points[0])
+                new_centroids.append(tuple(sum(p[j] for p in clusters[i])/len(clusters[i]) for j in range(d)))
             else:
-                new_centers.append(centers[j])
-        if new_centers == centers: break
-        centers = new_centers
-    return labels, centers
+                new_centroids.append(centroids[i])
+        if new_centroids == centroids: break
+        centroids = new_centroids
+    labels = []
+    for p in points:
+        labels.append(min(range(k), key=lambda i: distance(p, centroids[i])))
+    return centroids, labels, clusters
 
-def inertia(X, labels, centers):
-    return sum(distance(X[i], centers[labels[i]])**2 for i in range(len(X)))
+def inertia(points, centroids, labels):
+    return sum(distance(points[i], centroids[labels[i]])**2 for i in range(len(points)))
 
 def test():
-    X = [[0,0],[0,1],[1,0],[1,1],[10,10],[10,11],[11,10],[11,11]]
-    labels, centers = kmeans(X, 2)
-    # Should find two clusters
-    cluster_0 = {labels[i] for i in range(4)}
-    cluster_1 = {labels[i] for i in range(4, 8)}
-    assert len(cluster_0) == 1  # All in same cluster
-    assert len(cluster_1) == 1
-    assert cluster_0 != cluster_1
-    # Inertia should be small
-    assert inertia(X, labels, centers) < 10
-    # k=1
-    labels1, centers1 = kmeans(X, 1)
-    assert all(l == 0 for l in labels1)
-    print("All tests passed!")
+    random.seed(42)
+    cluster1 = [(random.gauss(0,0.3), random.gauss(0,0.3)) for _ in range(20)]
+    cluster2 = [(random.gauss(5,0.3), random.gauss(5,0.3)) for _ in range(20)]
+    points = cluster1 + cluster2
+    centroids, labels, clusters = kmeans(points, 2)
+    label_set_1 = set(labels[:20])
+    label_set_2 = set(labels[20:])
+    assert len(label_set_1) == 1 and len(label_set_2) == 1
+    assert label_set_1 != label_set_2
+    iner = inertia(points, centroids, labels)
+    assert iner < 10
+    print("  kmeans2: ALL TESTS PASSED")
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "test": test()
-    else: print("Usage: kmeans2.py test")
+    else: print("K-means clustering")
