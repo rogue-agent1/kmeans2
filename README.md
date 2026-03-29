@@ -1,6 +1,8 @@
-# kmeans-clustering
+# kmeans2
 
-K-means clustering algorithm. Single-file Python CLI, zero dependencies.
+kmeans2 - K-means, K-means++, and mini-batch K-means clustering.
+
+Zero-dependency, single-file Python CLI.
 
 ## Usage
 
