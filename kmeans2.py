@@ -1,38 +1,36 @@
 #!/usr/bin/env python3
-"""kmeans2 - K-means clustering."""
-import sys,argparse,json,math,random
-def distance(a,b):return math.sqrt(sum((ai-bi)**2 for ai,bi in zip(a,b)))
-def kmeans(X,k,max_iter=100):
-    centroids=random.sample(X,k)
-    for _ in range(max_iter):
-        clusters=[[] for _ in range(k)]
-        for x in X:
-            dists=[distance(x,c) for c in centroids]
-            clusters[dists.index(min(dists))].append(x)
-        new_centroids=[]
-        for cluster in clusters:
-            if cluster:new_centroids.append([sum(x[i] for x in cluster)/len(cluster) for i in range(len(cluster[0]))])
-            else:new_centroids.append(random.choice(X))
-        if new_centroids==centroids:break
-        centroids=new_centroids
-    labels=[]
-    for x in X:
-        dists=[distance(x,c) for c in centroids]
-        labels.append(dists.index(min(dists)))
-    inertia=sum(distance(x,centroids[l])**2 for x,l in zip(X,labels))
-    return centroids,labels,inertia
-def main():
-    p=argparse.ArgumentParser(description="K-means")
-    p.add_argument("--k",type=int,default=3);p.add_argument("--samples",type=int,default=150)
-    p.add_argument("--seed",type=int,default=42)
-    args=p.parse_args()
-    random.seed(args.seed)
-    X=[]
-    for i in range(args.k):
-        cx,cy=random.uniform(-10,10),random.uniform(-10,10)
-        for _ in range(args.samples//args.k):X.append([cx+random.gauss(0,1),cy+random.gauss(0,1)])
-    centroids,labels,inertia=kmeans(X,args.k)
+"""K-means clustering — Lloyd's algorithm."""
+import math, random, sys
+
+class KMeans:
+    def __init__(self, k=3, max_iter=100):
+        self.k = k; self.max_iter = max_iter; self.centroids = []; self.labels = []
+    def _dist(self, a, b): return math.sqrt(sum((ai-bi)**2 for ai, bi in zip(a, b)))
+    def fit(self, X):
+        self.centroids = random.sample(X, self.k)
+        for iteration in range(self.max_iter):
+            self.labels = [min(range(self.k), key=lambda c: self._dist(x, self.centroids[c])) for x in X]
+            new_centroids = []
+            for c in range(self.k):
+                members = [X[i] for i in range(len(X)) if self.labels[i] == c]
+                if members:
+                    new_centroids.append([sum(m[d] for m in members)/len(members) for d in range(len(X[0]))])
+                else: new_centroids.append(self.centroids[c])
+            if new_centroids == self.centroids: break
+            self.centroids = new_centroids
+        return self.labels
+    def inertia(self, X):
+        return sum(self._dist(X[i], self.centroids[self.labels[i]])**2 for i in range(len(X)))
+
+if __name__ == "__main__":
+    random.seed(42); X = []
+    centers = [(0,0), (5,5), (-3,7)]
+    for cx, cy in centers:
+        for _ in range(30): X.append([cx + random.gauss(0, 1), cy + random.gauss(0, 1)])
+    km = KMeans(k=3); labels = km.fit(X)
     from collections import Counter
-    cluster_sizes=Counter(labels)
-    print(json.dumps({"k":args.k,"samples":len(X),"inertia":round(inertia,2),"centroids":[[round(c,3) for c in cent] for cent in centroids],"cluster_sizes":dict(cluster_sizes)},indent=2))
-if __name__=="__main__":main()
+    print(f"K-Means (k=3, {len(X)} points):")
+    for i, c in enumerate(km.centroids):
+        count = labels.count(i)
+        print(f"  Cluster {i}: center=({c[0]:.2f}, {c[1]:.2f}), size={count}")
+    print(f"Inertia: {km.inertia(X):.2f}")
