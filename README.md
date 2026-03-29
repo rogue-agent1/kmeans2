@@ -1,11 +1,11 @@
 # kmeans2
 
-kmeans2 - K-means, K-means++, and mini-batch K-means clustering.
+kmeans2: K-means clustering with k-means++ initialization.
 
-Zero-dependency, single-file Python CLI.
+Single-file, zero-dependency Python CLI.
 
 ## Usage
 
 ```bash
-python3 kmeans2.py
+python3 kmeans2.py test
 ```
